@@ -1,0 +1,30 @@
+# ===== FREE AI APIs =====
+groq>=0.4.0                    # Free & Fast LLM API
+ollama>=0.1.0                  # Local LLM (offline)
+openai-whisper>=20231117       # Free speech recognition (local)
+# faster-whisper>=0.10.0       # Faster Whisper (optional)
+
+# ===== Speech & Audio =====
+SpeechRecognition>=3.10.0      # Fallback speech recognition
+sounddevice>=0.4.6             # Audio recording for Whisper
+soundfile>=0.12.1              # Audio file handling
+pyttsx3>=2.90                  # Free offline TTS
+numpy>=1.24.0                  # Audio processing
+
+# ===== System Automation =====
+pyautogui>=0.9.54              # Cross-platform GUI automation
+keyboard>=0.13.5               # Keyboard control
+psutil>=5.9.0                  # System info (cross-platform)
+pyperclip>=1.8.2               # Clipboard operations
+
+# ===== Web Research =====
+requests>=2.31.0               # HTTP requests
+beautifulsoup4>=4.12.0         # HTML parsing
+duckduckgo-search>=4.0.0       # Free search (no API key)
+
+# ===== Platform Support =====
+python-dotenv>=1.0.0           # Environment variables
+pydantic>=2.5.0                # Data validation
+
+# ===== Optional: Android Control =====
+# pure-python-adb>=0.3.0.dev0  # Uncomment for phone control
