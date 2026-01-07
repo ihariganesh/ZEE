@@ -1,6 +1,4 @@
 """Automation module for typing and keyboard/mouse control."""
-import pyautogui
-import keyboard
 import time
 from typing import Optional
 
@@ -10,10 +8,24 @@ class AutomationController:
     
     def __init__(self):
         """Initialize automation controller."""
-        # Set up safety settings
-        pyautogui.FAILSAFE = True  # Move mouse to corner to abort
-        pyautogui.PAUSE = 0.1  # Small pause between actions
-        print("Automation Controller initialized")
+        # Check if X11 display is available
+        import os
+        if not os.environ.get('DISPLAY'):
+            raise RuntimeError("No DISPLAY environment variable - GUI automation requires X11")
+        
+        # Import here to avoid X11 issues
+        try:
+            import pyautogui
+            import keyboard
+            self.pyautogui = pyautogui
+            self.keyboard = keyboard
+            
+            # Set up safety settings
+            pyautogui.FAILSAFE = True
+            pyautogui.PAUSE = 0.1
+            print("✅ Automation Controller initialized")
+        except Exception as e:
+            raise RuntimeError(f"Automation not available: {e}")
     
     # ===== Typing Automation =====
     
@@ -30,10 +42,10 @@ class AutomationController:
             print(f"Typing: {text[:50]}...")  # Show first 50 chars
             time.sleep(1)  # Give user time to focus on the desired window
             
-            pyautogui.write(text, interval=interval)
+            self.pyautogui.write(text, interval=interval)
             
             if press_enter:
-                pyautogui.press('enter')
+                self.pyautogui.press('enter')
             
             print("Typing completed")
             return True
@@ -51,9 +63,9 @@ class AutomationController:
         """
         try:
             if len(keys) == 1:
-                pyautogui.press(keys[0])
+                self.pyautogui.press(keys[0])
             else:
-                pyautogui.hotkey(*keys)
+                self.pyautogui.hotkey(*keys)
             print(f"Pressed keys: {' + '.join(keys)}")
             return True
         except Exception as e:
@@ -69,7 +81,7 @@ class AutomationController:
         """
         try:
             keys = shortcut.lower().split('+')
-            pyautogui.hotkey(*keys)
+            self.pyautogui.hotkey(*keys)
             print(f"Executed shortcut: {shortcut}")
             return True
         except Exception as e:
@@ -88,9 +100,9 @@ class AutomationController:
         except ImportError:
             print("pyperclip not available, using alternative method")
             # Fallback method
-            keyboard.write(text)
-            keyboard.send('ctrl+a')
-            keyboard.send('ctrl+c')
+            self.keyboard.write(text)
+            self.keyboard.send('ctrl+a')
+            self.keyboard.send('ctrl+c')
             return True
         except Exception as e:
             print(f"Error copying to clipboard: {e}")
@@ -99,7 +111,7 @@ class AutomationController:
     def paste_from_clipboard(self):
         """Paste from clipboard."""
         try:
-            pyautogui.hotkey('ctrl', 'v')
+            self.pyautogui.hotkey('ctrl', 'v')
             print("Pasted from clipboard")
             return True
         except Exception as e:
@@ -118,7 +130,7 @@ class AutomationController:
             duration: Time to complete movement in seconds
         """
         try:
-            pyautogui.moveTo(x, y, duration=duration)
+            self.pyautogui.moveTo(x, y, duration=duration)
             print(f"Moved mouse to ({x}, {y})")
             return True
         except Exception as e:
@@ -138,10 +150,10 @@ class AutomationController:
         """
         try:
             if x is not None and y is not None:
-                pyautogui.click(x=x, y=y, clicks=clicks, button=button)
+                self.pyautogui.click(x=x, y=y, clicks=clicks, button=button)
                 print(f"Clicked at ({x}, {y})")
             else:
-                pyautogui.click(clicks=clicks, button=button)
+                self.pyautogui.click(clicks=clicks, button=button)
                 print(f"Clicked at current position")
             return True
         except Exception as e:
@@ -156,7 +168,7 @@ class AutomationController:
             clicks: Number of scroll clicks (positive=up, negative=down)
         """
         try:
-            pyautogui.scroll(clicks)
+            self.pyautogui.scroll(clicks)
             direction = "up" if clicks > 0 else "down"
             print(f"Scrolled {direction} {abs(clicks)} clicks")
             return True
@@ -168,11 +180,11 @@ class AutomationController:
     
     def get_screen_size(self) -> tuple:
         """Get screen dimensions."""
-        return pyautogui.size()
+        return self.pyautogui.size()
     
     def get_mouse_position(self) -> tuple:
         """Get current mouse position."""
-        return pyautogui.position()
+        return self.pyautogui.position()
     
     def screenshot(self, filename: Optional[str] = None) -> str:
         """
@@ -188,7 +200,7 @@ class AutomationController:
             if filename is None:
                 filename = f"screenshot_{int(time.time())}.png"
             
-            screenshot = pyautogui.screenshot()
+            screenshot = self.pyautogui.screenshot()
             screenshot.save(filename)
             print(f"Screenshot saved to {filename}")
             return filename
@@ -230,14 +242,16 @@ class AutomationController:
     
     def minimize_window(self):
         """Minimize current window."""
-        if pyautogui.platform.system() == "Darwin":
+        import platform
+        if platform.system() == "Darwin":
             return self.keyboard_shortcut("command+m")
         else:
             return self.keyboard_shortcut("win+down")
     
     def maximize_window(self):
         """Maximize current window."""
-        if pyautogui.platform.system() == "Darwin":
+        import platform
+        if platform.system() == "Darwin":
             # macOS doesn't have a standard maximize shortcut
             return self.press_keys('f11')  # Fullscreen
         else:

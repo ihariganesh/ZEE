@@ -3,9 +3,17 @@ import sys
 import argparse
 from voice_handler import VoiceHandler
 from system_controller import SystemController, PhoneController
-from automation_controller import AutomationController
 from research_engine import ResearchEngine
 from config import Config
+
+# Try to import automation controller (may fail in headless environments)
+try:
+    from automation_controller import AutomationController
+    AUTOMATION_AVAILABLE = True
+except Exception as e:
+    print(f"⚠️  Automation features disabled: {e}")
+    AUTOMATION_AVAILABLE = False
+    AutomationController = None
 
 
 class AIAssistant:
@@ -25,7 +33,14 @@ class AIAssistant:
         self.voice = VoiceHandler()
         self.system = SystemController()
         self.phone = PhoneController()
-        self.automation = AutomationController()
+        
+        # Initialize automation if available
+        # TEMPORARILY DISABLED: X11 connection hangs on some systems
+        # TODO: Fix pyautogui X11 connection issues
+        self.automation = None
+        print("⚠️  Automation features (typing, mouse) temporarily disabled")
+        print("   (Voice, research, and system control still work!)")
+        
         self.research = ResearchEngine()
         
         print("\n" + "="*60)
@@ -114,6 +129,9 @@ class AIAssistant:
         
         # Typing automation
         elif 'type' in command_lower or 'write' in command_lower:
+            if not self.automation:
+                self.voice.speak("Typing features are not available")
+                return True
             self.voice.speak("What should I type? Start speaking after the beep.")
             text = self.voice.listen(phrase_time_limit=15)
             if text:
@@ -123,6 +141,9 @@ class AIAssistant:
                 self.voice.speak("I didn't hear anything to type")
         
         elif 'dictate' in command_lower or 'transcribe' in command_lower:
+            if not self.automation:
+                self.voice.speak("Dictation features are not available")
+                return True
             self.voice.speak("Start dictating. I will type what you say.")
             self.automation.dictate_and_type(self.voice, duration=30)
         
@@ -150,26 +171,38 @@ class AIAssistant:
                         response = f"Here's what I found: {first_result['title']}. "
                         if first_result['snippet']:
                             response += first_result['snippet'][:200]
-                        self.voice.speak(response)
-                else:
-                    self.voice.speak("Sorry, I couldn't find any information on that topic")
-            else:
-                self.voice.speak("What would you like me to research?")
-        
         # Window management
         elif 'switch window' in command_lower or 'next window' in command_lower:
+            if not self.automation:
+                self.voice.speak("Window management not available")
+                return True
             self.automation.switch_window()
             self.voice.speak("Switching window")
         
         elif 'minimize' in command_lower:
+            if not self.automation:
+                self.voice.speak("Window management not available")
+                return True
             self.automation.minimize_window()
             self.voice.speak("Minimizing window")
         
         elif 'maximize' in command_lower:
+            if not self.automation:
+                self.voice.speak("Window management not available")
+                return True
             self.automation.maximize_window()
             self.voice.speak("Maximizing window")
         
         # Screenshot
+        elif 'screenshot' in command_lower or 'screen shot' in command_lower:
+            if not self.automation:
+                self.voice.speak("Screenshot feature not available")
+                return True
+            filename = self.automation.screenshot()
+            if filename:
+                self.voice.speak(f"Screenshot saved as {filename}")
+            else:
+                self.voice.speak("Failed to take screenshot")
         elif 'screenshot' in command_lower or 'screen shot' in command_lower:
             filename = self.automation.screenshot()
             if filename:

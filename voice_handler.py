@@ -16,16 +16,23 @@ class VoiceHandler:
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
         
-        # Initialize FREE text-to-speech engine (offline)
-        self.tts_engine = pyttsx3.init()
-        self.tts_engine.setProperty('rate', Config.SPEECH_RATE)
-        
-        # Try to use female voice if available
-        voices = self.tts_engine.getProperty('voices')
-        for voice in voices:
-            if 'female' in voice.name.lower() or 'zira' in voice.name.lower():
-                self.tts_engine.setProperty('voice', voice.id)
-                break
+        # Initialize FREE text-to-speech engine (offline) - make it optional
+        self.tts_engine = None
+        try:
+            self.tts_engine = pyttsx3.init()
+            self.tts_engine.setProperty('rate', Config.SPEECH_RATE)
+            
+            # Try to use female voice if available
+            voices = self.tts_engine.getProperty('voices')
+            for voice in voices:
+                if 'female' in voice.name.lower() or 'zira' in voice.name.lower():
+                    self.tts_engine.setProperty('voice', voice.id)
+                    break
+            print("✅ Text-to-speech (pyttsx3) initialized")
+        except Exception as e:
+            print(f"⚠️  Text-to-speech not available: {e}")
+            print("   Install espeak or espeak-ng for TTS: sudo apt install espeak-ng")
+            print("   Voice output will be disabled")
         
         # Whisper setup (FREE local speech recognition)
         self.use_whisper = Config.USE_WHISPER
@@ -121,6 +128,10 @@ class VoiceHandler:
             text: Text to speak
             async_mode: If True, speak in a separate thread
         """
+        if not self.tts_engine:
+            print(f"🔊 [Would speak]: {text}")
+            return
+            
         if async_mode:
             thread = threading.Thread(target=self._speak_sync, args=(text,))
             thread.daemon = True
@@ -130,6 +141,9 @@ class VoiceHandler:
     
     def _speak_sync(self, text: str):
         """Synchronous speech helper method."""
+        if not self.tts_engine:
+            return
+            
         print(f"🔊 Speaking: {text}")
         self.tts_engine.say(text)
         self.tts_engine.runAndWait()
