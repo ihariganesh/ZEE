@@ -19,7 +19,10 @@ class VoiceHandler:
         # Initialize FREE text-to-speech engine (offline) - make it optional
         self.tts_engine = None
         try:
-            self.tts_engine = pyttsx3.init()
+            import warnings
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
+            
+            self.tts_engine = pyttsx3.init(debug=False)
             self.tts_engine.setProperty('rate', Config.SPEECH_RATE)
             
             # Try to use female voice if available
@@ -145,8 +148,12 @@ class VoiceHandler:
             return
             
         print(f"🔊 Speaking: {text}")
-        self.tts_engine.say(text)
-        self.tts_engine.runAndWait()
+        try:
+            self.tts_engine.say(text)
+            self.tts_engine.runAndWait()
+        except Exception:
+            # Silently ignore espeak callback errors
+            pass
     
     def continuous_listen(self, callback: Callable[[str], None], wake_word: str = "assistant"):
         """

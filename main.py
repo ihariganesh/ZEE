@@ -4,6 +4,7 @@ import argparse
 from voice_handler import VoiceHandler
 from system_controller import SystemController, PhoneController
 from research_engine import ResearchEngine
+from user_profile import UserProfile
 from config import Config
 
 # Try to import automation controller (may fail in headless environments)
@@ -28,6 +29,9 @@ class AIAssistant:
         # Validate configuration
         Config.validate()
         
+        # Initialize user profile
+        self.profile = UserProfile()
+        
         # Initialize all modules
         print("\n📦 Loading modules...")
         self.voice = VoiceHandler()
@@ -51,6 +55,34 @@ class AIAssistant:
         print("   • AI: Groq API (free) + Ollama (offline)")
         print("   • Search: DuckDuckGo (no API key)")
         print("="*60 + "\n")
+        
+        # Personalized greeting
+        self._greet_user()
+    
+    def _greet_user(self):
+        """Greet user and handle personalization."""
+        if not self.profile.has_name():
+            # First time user
+            self.voice.speak("Hi there! What's your name?")
+            print("\n🎤 Please tell me your name...")
+            
+            name_response = self.voice.listen(timeout=10, phrase_time_limit=5)
+            if name_response:
+                # Extract name (handle "my name is X" or just "X")
+                name = name_response.lower().replace("my name is", "").replace("i'm", "").replace("i am", "").strip()
+                name = name.split()[0].capitalize() if name else "Friend"
+                
+                self.profile.set_name(name)
+                self.voice.speak(f"Nice to meet you, {name}! I'm ready for today's tasks.")
+            else:
+                self.voice.speak("I didn't catch that. I'll just call you Friend for now.")
+        else:
+            # Returning user
+            name = self.profile.get_name()
+            greeting = f"{name}, I'm ready for today's tasks."
+            self.voice.speak(greeting)
+        
+        self.profile.update_last_use()
     
     def process_command(self, command: str) -> bool:
         """
