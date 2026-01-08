@@ -10,6 +10,8 @@ sounddevice>=0.4.6             # Audio recording for Whisper
 soundfile>=0.12.1              # Audio file handling
 pyttsx3>=2.90                  # Free offline TTS
 numpy>=1.24.0                  # Audio processing
+gtts>=2.5.0                    # Google TTS (natural voice like Siri/Gemini)
+pydub>=0.25.1                  # Audio playback
 
 # ===== System Automation =====
 pyautogui>=0.9.54              # Cross-platform GUI automation

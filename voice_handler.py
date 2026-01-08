@@ -7,6 +7,16 @@ import os
 from typing import Optional, Callable
 from config import Config
 
+# Import Google TTS for natural voice (like Siri/Gemini)
+try:
+    from gtts import gTTS
+    from pydub import AudioSegment
+    from pydub.playback import play
+    import io
+    GTTS_AVAILABLE = True
+except ImportError:
+    GTTS_AVAILABLE = False
+
 
 class VoiceHandler:
     """Handles voice input and speech output using FREE tools."""
@@ -16,29 +26,35 @@ class VoiceHandler:
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
         
-        # Initialize FREE text-to-speech engine (offline) - make it optional
+        # Try to use Google TTS (natural voice like Siri/Gemini)
+        self.use_gtts = GTTS_AVAILABLE
+        if self.use_gtts:
+            print("✅ Google TTS initialized - Natural voice mode (like Siri/Gemini)")
+        
+        # Initialize FREE text-to-speech engine (offline) - fallback only
         self.tts_engine = None
-        try:
-            import warnings
-            warnings.filterwarnings('ignore', category=DeprecationWarning)
-            
-            self.tts_engine = pyttsx3.init(debug=False)
-            # Better voice settings for clarity
-            self.tts_engine.setProperty('rate', 150)  # Slower, clearer speech
-            self.tts_engine.setProperty('volume', 1.0)  # Maximum volume
-            
-            # Try to use better voice
-            voices = self.tts_engine.getProperty('voices')
-            # Prefer English voices
-            for voice in voices:
-                if 'english' in voice.name.lower():
-                    self.tts_engine.setProperty('voice', voice.id)
-                    break
-            print("✅ Text-to-speech (pyttsx3) initialized - Clear voice mode")
-        except Exception as e:
-            print(f"⚠️  Text-to-speech not available: {e}")
-            print("   Install espeak or espeak-ng for TTS: sudo apt install espeak-ng")
-            print("   Voice output will be disabled")
+        if not self.use_gtts:
+            try:
+                import warnings
+                warnings.filterwarnings('ignore', category=DeprecationWarning)
+                
+                self.tts_engine = pyttsx3.init(debug=False)
+                # Better voice settings for clarity
+                self.tts_engine.setProperty('rate', 150)  # Slower, clearer speech
+                self.tts_engine.setProperty('volume', 1.0)  # Maximum volume
+                
+                # Try to use better voice
+                voices = self.tts_engine.getProperty('voices')
+                # Prefer English voices
+                for voice in voices:
+                    if 'english' in voice.name.lower():
+                        self.tts_engine.setProperty('voice', voice.id)
+                        break
+                print("✅ Text-to-speech (pyttsx3) initialized - Clear voice mode")
+            except Exception as e:
+                print(f"⚠️  Text-to-speech not available: {e}")
+                print("   Install espeak or espeak-ng for TTS: sudo apt install espeak-ng")
+                print("   Voice output will be disabled")
         
         # Whisper setup (FREE local speech recognition)
         self.use_whisper = Config.USE_WHISPER
@@ -132,16 +148,12 @@ class VoiceHandler:
     
     def speak(self, text: str, async_mode: bool = False):
         """
-        Convert text to speech using FREE offline TTS.
+        Convert text to speech using natural voice (Google TTS - like Siri/Gemini).
         
         Args:
             text: Text to speak
             async_mode: If True, speak in a separate thread
         """
-        if not self.tts_engine:
-            print(f"🔊 [Would speak]: {text}")
-            return
-            
         if async_mode:
             thread = threading.Thread(target=self._speak_sync, args=(text,))
             thread.daemon = True
@@ -150,17 +162,48 @@ class VoiceHandler:
             self._speak_sync(text)
     
     def _speak_sync(self, text: str):
-        """Synchronous speech helper method."""
-        if not self.tts_engine:
-            return
-            
+        """Synchronous speech helper method with natural voice."""
         print(f"🔊 Speaking: {text}")
-        try:
-            self.tts_engine.say(text)
-            self.tts_engine.runAndWait()
-        except Exception:
-            # Silently ignore espeak callback errors
-            pass
+        
+        # Try Google TTS first (natural voice like Siri/Gemini)
+        if self.use_gtts:
+            try:
+                # Generate speech with Google TTS
+                tts = gTTS(text=text, lang='en', slow=False)
+                
+                # Save to memory buffer
+                fp = io.BytesIO()
+                tts.write_to_fp(fp)
+                fp.seek(0)
+                
+                # Play using system command (faster and more reliable)
+                with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
+                    f.write(fp.read())
+                    temp_file = f.name
+                
+                # Play with mpg123 or ffplay (fast playback)
+                os.system(f'mpg123 -q "{temp_file}" 2>/dev/null || ffplay -nodisp -autoexit -hide_banner -loglevel panic "{temp_file}" 2>/dev/null')
+                
+                # Cleanup
+                try:
+                    os.unlink(temp_file)
+                except:
+                    pass
+                return
+            except Exception as e:
+                print(f"⚠️  Google TTS error: {e}, falling back to espeak...")
+        
+        # Fallback to pyttsx3 if Google TTS fails
+        if self.tts_engine:
+            try:
+                self.tts_engine.say(text)
+                self.tts_engine.runAndWait()
+            except Exception:
+                # Silently ignore espeak callback errors
+                pass
+        else:
+            # No TTS available, just print
+            print(f"🔊 [Would speak]: {text}")
     
     def continuous_listen(self, callback: Callable[[str], None], wake_word: str = "assistant"):
         """

@@ -19,7 +19,8 @@ A **FREE**, **cross-platform** (Windows/Linux) voice-controlled AI assistant tha
 | **AI Model** | Groq API (Llama 3.1) | FREE (14K+ requests/day) |
 | **Offline AI** | Ollama (local) | FREE |
 | **Voice Input** | OpenAI Whisper (local) | FREE |
-| **Voice Output** | pyttsx3 (offline TTS) | FREE |
+| **Voice Output** | Google TTS (neural) | FREE (like Siri/Gemini) |
+| **Fallback TTS** | pyttsx3 (offline) | FREE |
 | **Web Search** | DuckDuckGo | FREE (no API key) |
 
 ## 🚀 Quick Start
