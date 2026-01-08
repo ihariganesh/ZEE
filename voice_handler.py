@@ -23,15 +23,18 @@ class VoiceHandler:
             warnings.filterwarnings('ignore', category=DeprecationWarning)
             
             self.tts_engine = pyttsx3.init(debug=False)
-            self.tts_engine.setProperty('rate', Config.SPEECH_RATE)
+            # Better voice settings for clarity
+            self.tts_engine.setProperty('rate', 150)  # Slower, clearer speech
+            self.tts_engine.setProperty('volume', 1.0)  # Maximum volume
             
-            # Try to use female voice if available
+            # Try to use better voice
             voices = self.tts_engine.getProperty('voices')
+            # Prefer English voices
             for voice in voices:
-                if 'female' in voice.name.lower() or 'zira' in voice.name.lower():
+                if 'english' in voice.name.lower():
                     self.tts_engine.setProperty('voice', voice.id)
                     break
-            print("✅ Text-to-speech (pyttsx3) initialized")
+            print("✅ Text-to-speech (pyttsx3) initialized - Clear voice mode")
         except Exception as e:
             print(f"⚠️  Text-to-speech not available: {e}")
             print("   Install espeak or espeak-ng for TTS: sudo apt install espeak-ng")
@@ -54,15 +57,19 @@ class VoiceHandler:
                 print("   Falling back to Google Speech Recognition (requires internet)")
                 self.use_whisper = False
         
-        # Adjust for ambient noise
+        # Adjust for ambient noise with better sensitivity
         print("Calibrating microphone...")
         with self.microphone as source:
-            self.recognizer.adjust_for_ambient_noise(source, duration=1)
-        print("✅ Microphone ready!")
+            self.recognizer.adjust_for_ambient_noise(source, duration=2)
+            # Increase sensitivity for quieter voices
+            self.recognizer.energy_threshold = 300  # Lower = more sensitive (default: 300)
+            self.recognizer.dynamic_energy_threshold = True
+            self.recognizer.pause_threshold = 0.8  # Shorter pause detection
+        print("✅ Microphone ready! (High sensitivity mode)")
         
         self.listening = False
     
-    def listen(self, timeout: int = 5, phrase_time_limit: int = 10) -> Optional[str]:
+    def listen(self, timeout: int = 10, phrase_time_limit: int = 15) -> Optional[str]:
         """
         Listen for voice input and convert to text using FREE tools.
         
@@ -75,7 +82,7 @@ class VoiceHandler:
         """
         try:
             with self.microphone as source:
-                print("🎤 Listening...")
+                print("🎤 Listening... (Speak clearly and closer to mic)")
                 audio = self.recognizer.listen(
                     source,
                     timeout=timeout,

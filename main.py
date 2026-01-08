@@ -95,6 +95,7 @@ class AIAssistant:
             True to continue, False to exit
         """
         command_lower = command.lower()
+        print(f"\n🎯 Processing: {command}")
         
         # Exit commands
         if any(word in command_lower for word in ['exit', 'quit', 'goodbye', 'stop']):
@@ -103,22 +104,23 @@ class AIAssistant:
         
         # System control commands
         elif 'open' in command_lower:
+            self.voice.speak("On it!")  # Quick acknowledgment
             if 'browser' in command_lower or 'chrome' in command_lower:
                 self.system.open_application('browser')
-                self.voice.speak("Opening browser")
+                self.voice.speak("Browser opened")
             elif 'google' in command_lower:
                 self.system.open_url('https://www.google.com')
-                self.voice.speak("Opening Google")
+                self.voice.speak("Google opened")
             elif 'chatgpt' in command_lower or 'chat gpt' in command_lower:
                 self.system.open_url('https://chat.openai.com')
-                self.voice.speak("Opening ChatGPT")
+                self.voice.speak("ChatGPT opened")
             else:
                 # Extract app name
                 app_name = command_lower.replace('open', '').strip()
                 if self.system.open_application(app_name):
-                    self.voice.speak(f"Opening {app_name}")
+                    self.voice.speak(f"{app_name} opened")
                 else:
-                    self.voice.speak(f"Could not open {app_name}")
+                    self.voice.speak(f"Sorry, couldn't open {app_name}")
         
         # Settings control
         elif 'volume' in command_lower:
