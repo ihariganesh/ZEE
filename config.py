@@ -20,7 +20,7 @@ class Config:
     # Voice settings
     VOICE_LANGUAGE = os.getenv("VOICE_LANGUAGE", "en")
     SPEECH_RATE = int(os.getenv("SPEECH_RATE", "150"))
-    USE_WHISPER = os.getenv("USE_WHISPER", "true").lower() == "true"
+    USE_WHISPER = False  # Disabled - causes memory corruption with PyAudio/ALSA
     
     # System control
     ENABLE_PHONE_CONTROL = os.getenv("ENABLE_PHONE_CONTROL", "false").lower() == "true"

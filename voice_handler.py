@@ -24,7 +24,10 @@ class VoiceHandler:
     def __init__(self):
         """Initialize voice recognition and text-to-speech engines."""
         self.recognizer = sr.Recognizer()
+        
+        # Use default microphone (PyAudio has memory corruption with device enumeration)
         self.microphone = sr.Microphone()
+        print(f"🎤 Using default system microphone")
         
         # Try to use Google TTS (natural voice like Siri/Gemini)
         self.use_gtts = GTTS_AVAILABLE

@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""ZEE Service Daemon - Runs in background and responds to wake word."""
+import sys
+import os
+import signal
+import time
+from pathlib import Path
+
+# Suppress ALSA warnings
+os.environ['PYTHONWARNINGS'] = 'ignore'
+import warnings
+warnings.filterwarnings('ignore')
+
+# Redirect stderr to suppress ALSA messages
+import ctypes
+ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+try:
+    asound = ctypes.cdll.LoadLibrary('libasound.so.2')
+    asound.snd_lib_error_set_handler(c_error_handler)
+except:
+    pass
+
+# Add project directory to path
+project_dir = Path(__file__).parent.absolute()
+sys.path.insert(0, str(project_dir))
+
+# Redirect stdout/stderr to log file for service mode
+import sys
+log_file = project_dir / "logs" / "zee_service.log"
+log_file.parent.mkdir(exist_ok=True)
+sys.stdout = open(log_file, 'a', buffering=1)
+sys.stderr = sys.stdout
+print(f"\n{'='*60}")
+print(f"ZEE Service Log - {time.strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"{'='*60}\n")
+
+from voice_handler import VoiceHandler
+from system_controller import SystemController, PhoneController
+from research_engine import ResearchEngine
+from user_profile import UserProfile
+from config import Config
+
+
+class ZEEService:
+    """ZEE AI Assistant running as background service."""
+    
+    def __init__(self):
+        """Initialize ZEE service."""
+        self.running = False
+        self.profile = UserProfile()
+        
+        print("\n" + "="*60)
+        print("🤖 ZEE AI Service - Starting...")
+        print("="*60)
+        
+        # Initialize modules
+        self.voice = VoiceHandler()
+        self.system = SystemController()
+        self.phone = PhoneController()
+        self.research = ResearchEngine()
+        
+        # No automation for now (X11 issues)
+        self.automation = None
+        
+        print("\n✅ ZEE Service Ready!")
+        print("="*60)
+        print("💡 Say 'Hey ZEE' or 'ZEE' to activate")
+        print("   Press Ctrl+C to stop service")
+        print("="*60 + "\n")
+    
+    def greet_user(self):
+        """Greet user on service start."""
+        if not self.profile.has_name():
+            self.voice.speak("Hey! I'm ZEE, your AI assistant. What's your name?")
+            name_response = self.voice.listen(timeout=15, phrase_time_limit=5)
+            if name_response:
+                name = name_response.lower().replace("my name is", "").replace("i'm", "").replace("i am", "").strip()
+                name = name.split()[0].capitalize() if name else "Friend"
+                self.profile.set_name(name)
+                self.voice.speak(f"Nice to meet you, {name}! I'm always here when you need me. Just say 'Hey ZEE'!")
+            else:
+                self.voice.speak("No worries! Just say 'Hey ZEE' whenever you need me.")
+        else:
+            name = self.profile.get_name()
+            self.voice.speak(f"Hey {name}! ZEE is ready. Just say my name whenever you need help!")
+        
+        self.profile.update_last_use()
+    
+    def process_command(self, command: str):
+        """Process voice command."""
+        command_lower = command.lower()
+        print(f"\n🎯 Processing: {command}")
+        
+        # Exit/sleep commands
+        if any(word in command_lower for word in ['sleep', 'goodbye', 'stop listening']):
+            self.voice.speak("Going to sleep. Say 'Hey ZEE' to wake me up!")
+            return
+        
+        # System control
+        elif 'open' in command_lower:
+            self.voice.speak("On it!")
+            if 'browser' in command_lower or 'chrome' in command_lower:
+                self.system.open_application('browser')
+                self.voice.speak("Browser opened")
+            elif 'google' in command_lower:
+                self.system.open_url('https://www.google.com')
+                self.voice.speak("Google opened")
+            elif 'youtube' in command_lower:
+                self.system.open_url('https://www.youtube.com')
+                self.voice.speak("YouTube opened")
+            else:
+                app_name = command_lower.replace('open', '').strip()
+                if self.system.open_application(app_name):
+                    self.voice.speak(f"{app_name} opened")
+                else:
+                    self.voice.speak(f"Sorry, couldn't find {app_name}")
+        
+        # Volume control
+        elif 'volume' in command_lower:
+            if 'up' in command_lower or 'increase' in command_lower:
+                self.system.adjust_volume(change=10)
+                self.voice.speak("Volume up")
+            elif 'down' in command_lower or 'decrease' in command_lower:
+                self.system.adjust_volume(change=-10)
+                self.voice.speak("Volume down")
+            elif 'mute' in command_lower:
+                self.system.adjust_volume(level=0)
+                self.voice.speak("Muted")
+        
+        # Research
+        elif 'research' in command_lower or 'search' in command_lower or 'tell me about' in command_lower:
+            topic = command_lower.replace('research', '').replace('search', '').replace('tell me about', '').strip()
+            if topic:
+                self.voice.speak(f"Researching {topic}")
+                result = self.research.research_and_explain(topic)
+                if result:
+                    self.voice.speak(result)
+            else:
+                self.voice.speak("What would you like me to research?")
+        
+        # Help
+        elif 'help' in command_lower or 'what can you do' in command_lower:
+            help_text = """I can help you with: Opening apps and websites. 
+            Controlling volume and settings. Researching topics. 
+            Just ask me naturally!"""
+            self.voice.speak(help_text)
+        
+        else:
+            # General query - use AI
+            self.voice.speak("Let me think about that")
+            result = self.research.ai_processor.generate_response(command)
+            if result:
+                self.voice.speak(result)
+            else:
+                self.voice.speak("I'm not sure how to help with that. Try asking differently!")
+    
+    def listen_for_wake_word(self):
+        """Continuously listen for wake word 'ZEE' or 'Hey ZEE'."""
+        wake_words = ['zee', 'hey zee', 'ok zee', 'hey z']
+        
+        while self.running:
+            try:
+                # Listen with long timeout
+                text = self.voice.listen(timeout=30, phrase_time_limit=3)
+                
+                if text:
+                    text_lower = text.lower()
+                    
+                    # Check for wake word
+                    if any(wake in text_lower for wake in wake_words):
+                        print(f"\n🎤 Wake word detected: {text}")
+                        self.voice.speak("Yes? How can I help?")
+                        
+                        # Listen for actual command
+                        command = self.voice.listen(timeout=10, phrase_time_limit=15)
+                        if command:
+                            self.process_command(command)
+                        else:
+                            self.voice.speak("I didn't catch that. Say 'Hey ZEE' to try again!")
+                    
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print(f"Error in wake word detection: {e}")
+                time.sleep(1)
+    
+    def start(self):
+        """Start the ZEE service."""
+        self.running = True
+        
+        # Greet user on first start
+        self.greet_user()
+        
+        # Start listening for wake word
+        try:
+            self.listen_for_wake_word()
+        except KeyboardInterrupt:
+            print("\n\n🛑 Stopping ZEE service...")
+            self.voice.speak("Goodbye! ZEE service stopped.")
+            self.running = False
+    
+    def stop(self):
+        """Stop the ZEE service."""
+        self.running = False
+
+
+def main():
+    """Main entry point for ZEE service."""
+    service = ZEEService()
+    
+    # Handle Ctrl+C gracefully
+    def signal_handler(sig, frame):
+        print("\n\n🛑 Received stop signal...")
+        service.stop()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Start service
+    service.start()
+
+
+if __name__ == "__main__":
+    main()

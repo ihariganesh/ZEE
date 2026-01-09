@@ -1,14 +1,15 @@
 # ZEE AI Assistant 🤖
 
-A **FREE**, **cross-platform** (Windows/Linux) voice-controlled AI assistant that uses only free tools and APIs.
+A **FREE**, **cross-platform** (Windows/Linux) AI assistant with **wake word detection** - just like Siri or Google Assistant!
 
 ## ✨ Features
 
 ✅ **100% FREE** - No paid subscriptions required!  
+✅ **Wake Word Activated** - Say "Hey ZEE" anytime (like Siri/Alexa)  
+✅ **Auto-Start Service** - Runs in background on boot  
 ✅ **Cross-Platform** - Works on Windows, Linux (Ubuntu, Arch, etc.)  
-✅ **Voice Control** - Hands-free operation  
-✅ **System Control** - Open apps, adjust settings  
-✅ **Auto-Typing** - Voice-to-text automation  
+✅ **Natural Voice** - Google Neural TTS (sounds like Siri/Gemini)  
+✅ **System Control** - Open apps, adjust volume, WiFi, brightness  
 ✅ **AI Research** - Web search with AI explanations  
 ✅ **Offline Mode** - Works without internet (with Ollama)  
 
@@ -18,10 +19,23 @@ A **FREE**, **cross-platform** (Windows/Linux) voice-controlled AI assistant tha
 |-----------|------|------|
 | **AI Model** | Groq API (Llama 3.1) | FREE (14K+ requests/day) |
 | **Offline AI** | Ollama (local) | FREE |
-| **Voice Input** | OpenAI Whisper (local) | FREE |
+| **Voice Input** | Google Speech Recognition | FREE |
 | **Voice Output** | Google TTS (neural) | FREE (like Siri/Gemini) |
 | **Fallback TTS** | pyttsx3 (offline) | FREE |
 | **Web Search** | DuckDuckGo | FREE (no API key) |
+
+## 🎙️ Two Usage Modes
+
+### Mode 1: Background Service (Recommended)
+- Auto-starts on boot
+- Always listening for "Hey ZEE"
+- Hands-free operation
+- See [SERVICE_SETUP.md](SERVICE_SETUP.md) for installation
+
+### Mode 2: Command-Line (Manual)
+- Run manually when needed
+- Type or speak commands
+- No wake word required
 
 ## 🚀 Quick Start
 
@@ -31,7 +45,7 @@ A **FREE**, **cross-platform** (Windows/Linux) voice-controlled AI assistant tha
 ```bash
 # System dependencies
 sudo apt-get update
-sudo apt-get install python3 python3-pip portaudio19-dev espeak ffmpeg
+sudo apt-get install python3 python3-pip portaudio19-dev espeak ffmpeg mpg123
 
 # Clone the repo
 git clone https://github.com/ihariganesh/ZEE.git
@@ -45,7 +59,7 @@ chmod +x setup.sh
 **On Linux (Arch):**
 ```bash
 # System dependencies
-sudo pacman -S python python-pip portaudio espeak ffmpeg
+sudo pacman -S python python-pip portaudio espeak ffmpeg mpg123
 
 # Clone and setup
 git clone https://github.com/ihariganesh/ZEE.git
@@ -64,14 +78,14 @@ cd ZEE
 setup.bat
 ```
 
-### 2. Get FREE Groq API Key (Optional but Recommended)
+### 2. Get FREE Groq API Key (Required)
 
 1. Go to [https://console.groq.com](https://console.groq.com)
 2. Sign up (FREE)
 3. Get your API key
-4. Edit `.env` file:
-   ```
-   GROQ_API_KEY=your_key_here
+4. Edit `config.py`:
+   ```python
+   GROQ_API_KEY = "your_key_here"
    ```
 
 ### 3. Install Ollama (Optional - for Offline AI)
@@ -88,7 +102,33 @@ Download from: https://ollama.ai/download
 Run: ollama pull llama3.2
 ```
 
-### 4. Run the Assistant
+### 4. Choose Your Mode
+
+**Option A: Background Service (Wake Word Mode)**
+
+Install ZEE as a service that auto-starts on boot:
+
+```bash
+# See detailed instructions
+cat SERVICE_SETUP.md
+
+# Quick install
+mkdir -p ~/.config/systemd/user
+cp zee-service@.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable zee-service@$USER.service
+systemctl --user start zee-service@$USER.service
+
+# Check status
+systemctl --user status zee-service@$USER.service
+
+# View logs
+tail -f logs/zee_service.log
+```
+
+Now say **"Hey ZEE"** or **"ZEE"** anytime!
+
+**Option B: Command-Line Mode (Manual)**
 
 ```bash
 # Activate virtual environment
@@ -97,16 +137,22 @@ source venv/bin/activate  # Linux
 venv\Scripts\activate.bat  # Windows
 
 # Run
-python main.py --mode interactive
+python main.py
 ```
 
-Say "**assistant**" followed by your command!
-
 ## 🎤 Voice Commands
+
+### Wake Word (Service Mode Only)
+```
+"Hey ZEE" - Activates the assistant
+"ZEE" - Short activation
+"OK ZEE" - Alternative activation
+```
 
 ### Opening Applications
 ```
 "Open browser"
+"Open Chrome"
 "Open Google"
 "Open ChatGPT"
 "Open calculator"
@@ -115,16 +161,11 @@ Say "**assistant**" followed by your command!
 ### System Control
 ```
 "Volume up" / "Volume down"
-"Mute volume"
+"Set volume to 50"
+"Mute" / "Unmute"
 "Turn WiFi on/off"
 "Set brightness to 50 percent"
 "System info"
-```
-
-### Auto-Typing
-```
-"Type [text]"
-"Dictate"  # Start continuous typing
 ```
 
 ### Research & AI
@@ -132,57 +173,87 @@ Say "**assistant**" followed by your command!
 "Research quantum computing"
 "Tell me about machine learning"
 "Search for Python tutorials"
+"Help" - Show available commands
 ```
 
-### Window Management
-```
-"Switch window"
-"Minimize window"
-"Take screenshot"
-```
+## 🔧 Service Management (Background Mode)
 
-### Exit
-```
-"Exit" / "Quit" / "Goodbye"
+```bash
+# Start service
+systemctl --user start zee-service@$USER.service
+
+# Stop service
+systemctl --user stop zee-service@$USER.service
+
+# Restart service
+systemctl --user restart zee-service@$USER.service
+
+# Check status
+systemctl --user status zee-service@$USER.service
+
+# View live logs
+tail -f ~/ZEE/logs/zee_service.log
+
+# Enable auto-start on boot
+systemctl --user enable zee-service@$USER.service
+
+# Disable auto-start
+systemctl --user disable zee-service@$USER.service
 ```
 
 ## 📁 Project Structure
 
 ```
 ZEE/
-├── main.py                    # Main application
+├── main.py                    # Command-line interface
+├── zee_service.py             # Background service daemon
+├── zee-service@.service       # Systemd service file
 ├── config.py                  # Configuration
-├── voice_handler.py           # Speech (Whisper + pyttsx3)
+├── voice_handler.py           # Speech (Google TTS + Speech Recognition)
 ├── system_controller.py       # System control
-├── automation_controller.py   # Typing automation
-├── research_engine.py         # Research (Groq + Ollama)
+├── research_engine.py         # Research (Groq + Ollama + DuckDuckGo)
+├── user_profile.py            # User personalization
 ├── requirements.txt           # Dependencies
-├── .env                       # API keys (create from .env.example)
+├── SERVICE_SETUP.md           # Service installation guide
+├── AUDIO_SETUP.md            # Microphone troubleshooting
 └── README.md                 # This file
 ```
 
 ## ⚙️ Configuration
 
-Edit `.env` file:
+Edit `config.py`:
 
-```bash
-# FREE Groq API (highly recommended)
-GROQ_API_KEY=your_groq_api_key_here
+```python
+# FREE Groq API (required)
+GROQ_API_KEY = "your_groq_api_key_here"
 
 # Ollama (local AI, completely free)
-OLLAMA_BASE_URL=http://localhost:11434
-USE_OLLAMA_OFFLINE=true
+OLLAMA_BASE_URL = "http://localhost:11434"
+USE_OLLAMA_OFFLINE = True
 
 # Voice settings
-USE_WHISPER=true  # Use local Whisper (free)
-VOICE_LANGUAGE=en
-SPEECH_RATE=150
+VOICE_LANGUAGE = "en"
+SPEECH_RATE = 150
 
 # Research
-MAX_SEARCH_RESULTS=5
+MAX_SEARCH_RESULTS = 5
 ```
 
 ## 🔧 Troubleshooting
+
+### Service Not Starting
+```bash
+# Check service status
+systemctl --user status zee-service@$USER.service
+
+# View logs
+tail -50 ~/ZEE/logs/zee_service.log
+
+# Test manually
+cd ~/ZEE
+source venv/bin/activate
+python zee_service.py
+```
 
 ### Microphone not working
 ```bash
