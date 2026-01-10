@@ -257,11 +257,36 @@ python zee_service.py
 
 ### Microphone not working
 ```bash
-# Test microphone
-python voice_handler.py
+# For Bluetooth earbuds/headset - Run this first!
+./setup_bluetooth_mic.sh
 
-# Linux: Check permissions
-sudo usermod -a -G audio $USER
+# Test microphone detection
+python test_microphone.py
+
+# Check if muted
+pactl list sources | grep -A 10 "bluez_input" | grep Mute
+
+# Manual unmute (Linux)
+pactl set-source-mute @DEFAULT_SOURCE@ 0
+pactl set-source-volume @DEFAULT_SOURCE@ 120%
+
+# See AUDIO_SETUP.md for detailed troubleshooting
+```
+
+### Bluetooth Earbuds Not Detected
+```bash
+# 1. Make sure earbuds are connected in "Headset" mode (not just music)
+# 2. Run the setup script
+./setup_bluetooth_mic.sh
+
+# 3. Check if Bluetooth input is available
+pactl list sources short | grep bluez
+
+# 4. Set as default
+pactl set-default-source bluez_input.YOUR_DEVICE
+
+# 5. Restart service
+systemctl --user restart zee-service@$USER.service
 ```
 
 ### Whisper model download

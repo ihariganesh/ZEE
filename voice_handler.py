@@ -4,8 +4,28 @@ import pyttsx3
 import threading
 import tempfile
 import os
+import sys
+import warnings
+from ctypes import *
 from typing import Optional, Callable
 from config import Config
+
+# Suppress ALSA errors before importing anything else
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+
+def py_error_handler(filename, line, function, err, fmt):
+    pass  # Suppress all ALSA errors
+
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+try:
+    asound = cdll.LoadLibrary('libasound.so.2')
+    asound.snd_lib_error_set_handler(c_error_handler)
+except:
+    pass  # Not fatal if we can't suppress
+
+# Suppress Python warnings
+warnings.filterwarnings('ignore')
 
 # Import Google TTS for natural voice (like Siri/Gemini)
 try:
@@ -25,9 +45,10 @@ class VoiceHandler:
         """Initialize voice recognition and text-to-speech engines."""
         self.recognizer = sr.Recognizer()
         
-        # Use default microphone (PyAudio has memory corruption with device enumeration)
+        # Use default microphone (avoid device enumeration - causes PyAudio crashes)
+        # We'll set the system default to the Bluetooth device instead
         self.microphone = sr.Microphone()
-        print(f"🎤 Using default system microphone")
+        print(f"🎤 Using system default microphone")
         
         # Try to use Google TTS (natural voice like Siri/Gemini)
         self.use_gtts = GTTS_AVAILABLE
@@ -77,14 +98,24 @@ class VoiceHandler:
                 self.use_whisper = False
         
         # Adjust for ambient noise with better sensitivity
-        print("Calibrating microphone...")
-        with self.microphone as source:
-            self.recognizer.adjust_for_ambient_noise(source, duration=2)
-            # Increase sensitivity for quieter voices
-            self.recognizer.energy_threshold = 300  # Lower = more sensitive (default: 300)
+        try:
+            print("Calibrating microphone...")
+            with self.microphone as source:
+                self.recognizer.adjust_for_ambient_noise(source, duration=1)
+                # Optimized settings for Bluetooth microphones
+                self.recognizer.energy_threshold = 200  # Lower = more sensitive for Bluetooth
+                self.recognizer.dynamic_energy_threshold = True
+                self.recognizer.dynamic_energy_adjustment_damping = 0.15
+                self.recognizer.dynamic_energy_ratio = 1.5
+                self.recognizer.pause_threshold = 0.8  # Shorter pause detection
+                self.recognizer.phrase_threshold = 0.3  # Min seconds of speaking audio
+                self.recognizer.non_speaking_duration = 0.5  # Seconds of silence to mark end
+            print("✅ Microphone ready! (Bluetooth optimized mode)")
+        except Exception as e:
+            print(f"⚠️  Microphone calibration failed: {e}")
+            print("   Will use default settings")
+            self.recognizer.energy_threshold = 200
             self.recognizer.dynamic_energy_threshold = True
-            self.recognizer.pause_threshold = 0.8  # Shorter pause detection
-        print("✅ Microphone ready! (High sensitivity mode)")
         
         self.listening = False
     
