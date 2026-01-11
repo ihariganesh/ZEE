@@ -37,6 +37,15 @@ try:
 except ImportError:
     GTTS_AVAILABLE = False
 
+# Import Vosk for better offline recognition (works great with Bluetooth)
+try:
+    from vosk import Model, KaldiRecognizer
+    import json
+    import wave
+    VOSK_AVAILABLE = True
+except ImportError:
+    VOSK_AVAILABLE = False
+
 
 class VoiceHandler:
     """Handles voice input and speech output using FREE tools."""
@@ -80,6 +89,31 @@ class VoiceHandler:
                 print("   Install espeak or espeak-ng for TTS: sudo apt install espeak-ng")
                 print("   Voice output will be disabled")
         
+        # Vosk setup (FREE offline speech recognition - BEST for Bluetooth!)
+        self.use_vosk = VOSK_AVAILABLE
+        self.vosk_model = None
+        self.vosk_recognizer = None
+        
+        if self.use_vosk:
+            try:
+                import urllib.request
+                import zipfile
+                
+                model_path = os.path.expanduser("~/vosk-model-small-en-us-0.15")
+                
+                if not os.path.exists(model_path):
+                    print("❌ Vosk model not found at:", model_path)
+                    print("   Run: cd ~ && wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip && unzip vosk-model-small-en-us-0.15.zip")
+                    self.use_vosk = False
+                    self.vosk_model = None
+                else:
+                    self.vosk_model = Model(model_path)
+                print("✅ Vosk offline recognition initialized (BEST for Bluetooth!)")
+            except Exception as e:
+                print(f"⚠️  Vosk not available: {e}")
+                print("   Will use Google Speech Recognition")
+                self.use_vosk = False
+        
         # Whisper setup (FREE local speech recognition)
         self.use_whisper = Config.USE_WHISPER
         self.whisper_model = None
@@ -102,20 +136,18 @@ class VoiceHandler:
             print("Calibrating microphone...")
             with self.microphone as source:
                 self.recognizer.adjust_for_ambient_noise(source, duration=1)
-                # Optimized settings for Bluetooth microphones
-                self.recognizer.energy_threshold = 200  # Lower = more sensitive for Bluetooth
-                self.recognizer.dynamic_energy_threshold = True
-                self.recognizer.dynamic_energy_adjustment_damping = 0.15
-                self.recognizer.dynamic_energy_ratio = 1.5
-                self.recognizer.pause_threshold = 0.8  # Shorter pause detection
-                self.recognizer.phrase_threshold = 0.3  # Min seconds of speaking audio
-                self.recognizer.non_speaking_duration = 0.5  # Seconds of silence to mark end
-            print("✅ Microphone ready! (Bluetooth optimized mode)")
+                # VERY sensitive settings for Bluetooth microphones
+                self.recognizer.energy_threshold = 50  # VERY low = maximum sensitivity
+                self.recognizer.dynamic_energy_threshold = False  # Disable auto-adjust
+                self.recognizer.pause_threshold = 0.6  # Shorter pause detection
+                self.recognizer.phrase_threshold = 0.2  # Min seconds of speaking audio
+                self.recognizer.non_speaking_duration = 0.4  # Seconds of silence to mark end
+            print("✅ Microphone ready! (Maximum sensitivity for Bluetooth)")
         except Exception as e:
             print(f"⚠️  Microphone calibration failed: {e}")
             print("   Will use default settings")
-            self.recognizer.energy_threshold = 200
-            self.recognizer.dynamic_energy_threshold = True
+            self.recognizer.energy_threshold = 50
+            self.recognizer.dynamic_energy_threshold = False
         
         self.listening = False
     
@@ -141,7 +173,35 @@ class VoiceHandler:
             
             print("Processing speech...")
             
-            # Try Whisper first (FREE & offline)
+            # Try Vosk first (BEST for Bluetooth - offline & accurate!)
+            if self.use_vosk and self.vosk_model:
+                try:
+                    # Convert audio to WAV format Vosk expects
+                    wav_data = audio.get_wav_data(convert_rate=16000, convert_width=2)
+                    
+                    # Create recognizer for this audio
+                    rec = KaldiRecognizer(self.vosk_model, 16000)
+                    rec.SetWords(True)
+                    
+                    # Process audio
+                    if rec.AcceptWaveform(wav_data):
+                        result = json.loads(rec.Result())
+                    else:
+                        result = json.loads(rec.FinalResult())
+                    
+                    text = result.get("text", "").strip()
+                    
+                    if text:
+                        print(f"💬 You said: {text}")
+                        return text
+                    else:
+                        print("❌ Could not understand audio (Vosk)")
+                        # Fall through to try Google
+                        
+                except Exception as e:
+                    print(f"Vosk error: {e}, trying Google...")
+            
+            # Try Whisper (FREE & offline) - disabled by default due to memory issues
             if self.use_whisper and self.whisper_model:
                 try:
                     # Save audio to temp file
