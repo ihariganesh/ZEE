@@ -173,7 +173,19 @@ class VoiceHandler:
             
             print("Processing speech...")
             
-            # Try Vosk first (BEST for Bluetooth - offline & accurate!)
+            # Try Google Speech Recognition first (better at recognizing "zee")
+            try:
+                text = self.recognizer.recognize_google(audio, language=Config.VOICE_LANGUAGE)
+                print(f"💬 You said: {text}")
+                return text
+            except sr.UnknownValueError:
+                print("❌ Google couldn't understand, trying Vosk...")
+            except sr.RequestError:
+                print("❌ No internet, trying Vosk offline...")
+            except Exception as e:
+                print(f"Google error: {e}, trying Vosk...")
+            
+            # Try Vosk offline (fallback when Google fails)
             if self.use_vosk and self.vosk_model:
                 try:
                     # Convert audio to WAV format Vosk expects
@@ -220,12 +232,11 @@ class VoiceHandler:
                     return text
                     
                 except Exception as e:
-                    print(f"Whisper error: {e}, falling back to Google...")
+                    print(f"Whisper error: {e}")
             
-            # Fallback to Google (requires internet but FREE)
-            text = self.recognizer.recognize_google(audio, language=Config.VOICE_LANGUAGE)
-            print(f"💬 You said: {text}")
-            return text
+            # If all recognition methods failed
+            print("❌ Could not understand audio")
+            return None
             
         except sr.WaitTimeoutError:
             print("⏱️  Timeout - no speech detected")

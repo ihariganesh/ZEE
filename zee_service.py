@@ -151,7 +151,7 @@ class ZEEService:
         else:
             # General query - use AI
             self.voice.speak("Let me think about that")
-            result = self.research.ai_processor.generate_response(command)
+            result = self.research.ai.generate_response(command)
             if result:
                 self.voice.speak(result)
             else:
@@ -159,7 +159,8 @@ class ZEEService:
     
     def listen_for_wake_word(self):
         """Continuously listen for wake word 'ZEE' or 'Hey ZEE'."""
-        wake_words = ['zee', 'hey zee', 'ok zee', 'hey z']
+        # Accept various pronunciations Vosk might recognize
+        wake_words = ['zee', 'hey zee', 'ok zee', 'hey z', ' z ', 'z', 'hazy', 'hey easy', 'easy', 'the z']
         
         while self.running:
             try:
