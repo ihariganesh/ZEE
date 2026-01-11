@@ -7,6 +7,8 @@ Type=simple
 User=%i
 Environment="DISPLAY=:0"
 Environment="XAUTHORITY=/home/%i/.Xauthority"
+Environment="WAYLAND_DISPLAY=wayland-1"
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
 Environment="PULSE_SERVER=/run/user/1000/pulse/native"
 WorkingDirectory=/home/%i/ZEE
 ExecStart=/home/%i/ZEE/venv/bin/python /home/%i/ZEE/zee_service.py
