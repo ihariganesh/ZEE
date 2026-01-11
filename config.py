@@ -17,6 +17,9 @@ class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     
+    # GitHub Integration
+    GITHUB_PERSONAL_ACCESS_TOKEN = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN", "")
+    
     # Voice settings
     VOICE_LANGUAGE = os.getenv("VOICE_LANGUAGE", "en")
     SPEECH_RATE = int(os.getenv("SPEECH_RATE", "150"))
