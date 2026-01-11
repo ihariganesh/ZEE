@@ -151,17 +151,19 @@ class ZEEService:
         # Typing commands
         elif any(word in command_lower for word in ['type', 'write', 'enter', 'search for']):
             # Extract what to type
-            text_to_type = command_lower
-            for word in ['type', 'write', 'enter', 'search for', 'something', 'this']:
+            text_to_type = command
+            for word in ['type', 'Type', 'write', 'Write', 'enter', 'Enter', 'search for', 'Search for', 
+                        'in my browser', 'in browser', 'on my screen', 'something', 'this']:
                 text_to_type = text_to_type.replace(word, '')
             text_to_type = text_to_type.strip()
             
             if text_to_type:
                 import pyautogui
                 import time
+                self.voice.speak("Typing")
                 time.sleep(0.5)  # Brief delay to switch to window
-                pyautogui.typewrite(text_to_type, interval=0.05)
-                self.voice.speak("Typed")
+                pyautogui.write(text_to_type, interval=0.05)
+                print(f"✍️ Typed: {text_to_type}")
             else:
                 self.voice.speak("What should I type?")
         
