@@ -148,6 +148,23 @@ class ZEEService:
             Just ask me naturally!"""
             self.voice.speak(help_text)
         
+        # Typing commands
+        elif any(word in command_lower for word in ['type', 'write', 'enter', 'search for']):
+            # Extract what to type
+            text_to_type = command_lower
+            for word in ['type', 'write', 'enter', 'search for', 'something', 'this']:
+                text_to_type = text_to_type.replace(word, '')
+            text_to_type = text_to_type.strip()
+            
+            if text_to_type:
+                import pyautogui
+                import time
+                time.sleep(0.5)  # Brief delay to switch to window
+                pyautogui.typewrite(text_to_type, interval=0.05)
+                self.voice.speak("Typed")
+            else:
+                self.voice.speak("What should I type?")
+        
         else:
             # General query - use AI
             self.voice.speak("Let me think about that")
@@ -164,23 +181,39 @@ class ZEEService:
         
         while self.running:
             try:
-                # Listen with long timeout
-                text = self.voice.listen(timeout=30, phrase_time_limit=3)
+                # Listen with longer phrase limit to catch full commands
+                text = self.voice.listen(timeout=30, phrase_time_limit=10)
                 
                 if text:
                     text_lower = text.lower()
                     
                     # Check for wake word
-                    if any(wake in text_lower for wake in wake_words):
+                    wake_word_found = None
+                    for wake in wake_words:
+                        if wake in text_lower:
+                            wake_word_found = wake
+                            break
+                    
+                    if wake_word_found:
                         print(f"\n🎤 Wake word detected: {text}")
-                        self.voice.speak("Yes? How can I help?")
                         
-                        # Listen for actual command
-                        command = self.voice.listen(timeout=10, phrase_time_limit=15)
-                        if command:
-                            self.process_command(command)
+                        # Check if command is already in the same sentence
+                        command_part = text_lower.replace(wake_word_found, '', 1).strip()
+                        
+                        if command_part and len(command_part) > 3:
+                            # Process command immediately (e.g., "zee open browser")
+                            print(f"🚀 Immediate command: {command_part}")
+                            self.process_command(command_part)
                         else:
-                            self.voice.speak("I didn't catch that. Say 'Hey ZEE' to try again!")
+                            # No command yet, ask for it
+                            self.voice.speak("Yes?")
+                            
+                            # Listen for actual command
+                            command = self.voice.listen(timeout=10, phrase_time_limit=15)
+                            if command:
+                                self.process_command(command)
+                            else:
+                                self.voice.speak("I didn't catch that.")
                     
             except KeyboardInterrupt:
                 break
