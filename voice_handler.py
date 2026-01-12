@@ -52,6 +52,10 @@ class VoiceHandler:
     
     def __init__(self):
         """Initialize voice recognition and text-to-speech engines."""
+        # Speech interruption flag
+        self.stop_speaking = False
+        self.speaking_thread = None
+        
         self.recognizer = sr.Recognizer()
         
         # Use default microphone (avoid device enumeration - causes PyAudio crashes)
@@ -251,6 +255,11 @@ class VoiceHandler:
             print(f"❌ Error: {e}")
             return None
     
+    def stop_speech(self):
+        """Stop current speech immediately."""
+        self.stop_speaking = True
+        print("🛑 Speech interrupted")
+    
     def speak(self, text: str, async_mode: bool = False):
         """
         Convert text to speech using natural voice (Google TTS - like Siri/Gemini).
@@ -259,20 +268,27 @@ class VoiceHandler:
             text: Text to speak
             async_mode: If True, speak in a separate thread
         """
+        self.stop_speaking = False
         if async_mode:
-            thread = threading.Thread(target=self._speak_sync, args=(text,))
-            thread.daemon = True
-            thread.start()
+            self.speaking_thread = threading.Thread(target=self._speak_sync, args=(text,))
+            self.speaking_thread.daemon = True
+            self.speaking_thread.start()
         else:
             self._speak_sync(text)
     
     def _speak_sync(self, text: str):
         """Synchronous speech helper method with natural voice."""
+        if self.stop_speaking:
+            return
+            
         print(f"🔊 Speaking: {text}")
         
         # Try Google TTS first (natural voice like Siri/Gemini)
         if self.use_gtts:
             try:
+                if self.stop_speaking:
+                    return
+                    
                 # Generate speech with Google TTS
                 tts = gTTS(text=text, lang='en', slow=False)
                 
@@ -281,13 +297,17 @@ class VoiceHandler:
                 tts.write_to_fp(fp)
                 fp.seek(0)
                 
+                if self.stop_speaking:
+                    return
+                
                 # Play using system command (faster and more reliable)
                 with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
                     f.write(fp.read())
                     temp_file = f.name
                 
-                # Play with mpg123 or ffplay (fast playback)
-                os.system(f'mpg123 -q "{temp_file}" 2>/dev/null || ffplay -nodisp -autoexit -hide_banner -loglevel panic "{temp_file}" 2>/dev/null')
+                if not self.stop_speaking:
+                    # Play with mpg123 or ffplay (fast playback)
+                    os.system(f'mpg123 -q "{temp_file}" 2>/dev/null || ffplay -nodisp -autoexit -hide_banner -loglevel panic "{temp_file}" 2>/dev/null')
                 
                 # Cleanup
                 try:

@@ -69,3 +69,15 @@ class UserProfile:
     def is_first_time(self) -> bool:
         """Check if this is user's first time."""
         return self.profile.get("interaction_count", 0) == 0
+    
+    def get_preference(self, key: str, default=None):
+        """Get a user preference."""
+        return self.profile.get("preferences", {}).get(key, default)
+    
+    def set_preference(self, key: str, value):
+        """Set a user preference."""
+        if "preferences" not in self.profile:
+            self.profile["preferences"] = {}
+        self.profile["preferences"][key] = value
+        self._save_profile()
+        print(f"✅ Saved preference: {key} = {value}")

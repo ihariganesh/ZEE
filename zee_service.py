@@ -41,6 +41,7 @@ from voice_handler import VoiceHandler
 from system_controller import SystemController, PhoneController
 from research_engine import ResearchEngine
 from user_profile import UserProfile
+from daily_briefing import DailyBriefing
 from config import Config
 
 
@@ -61,6 +62,7 @@ class ZEEService:
         self.system = SystemController()
         self.phone = PhoneController()
         self.research = ResearchEngine()
+        self.briefing = DailyBriefing()
         
         # No automation for now (X11 issues)
         self.automation = None
@@ -94,8 +96,20 @@ class ZEEService:
         command_lower = command.lower()
         print(f"\n🎯 Processing: {command}")
         
+        # Stop speaking command
+        if any(word in command_lower for word in ['stop', 'quiet', 'shut up', 'stop talking', 'stop speaking']):
+            self.voice.stop_speech()
+            return
+        
+        # Daily briefing
+        elif any(phrase in command_lower for phrase in ["what's special today", 'whats special today', 'daily briefing', "what's today", "today's briefing"]):
+            city = self.profile.get_preference('city', 'Karur')
+            country = self.profile.get_preference('country', 'India')
+            briefing = self.briefing.format_briefing(city, country)
+            self.voice.speak(briefing)
+        
         # Exit/sleep commands
-        if any(word in command_lower for word in ['sleep', 'goodbye', 'stop listening']):
+        elif any(word in command_lower for word in ['sleep', 'goodbye', 'stop listening']):
             self.voice.speak("Going to sleep. Say 'Hey ZEE' to wake me up!")
             return
         
