@@ -1,0 +1,28 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ZEE AI Assistant
+Comment=Voice-controlled AI assistant with speech recognition
+Exec=/home/hari/ZEE/launch_zee.sh
+Icon=/home/hari/ZEE/zee_icon.png
+Terminal=false
+Categories=Utility;AudioVideo;Audio;
+Keywords=voice;assistant;ai;speech;
+StartupNotify=true
+Actions=Start;Stop;Restart;Logs;
+
+[Desktop Action Start]
+Name=Start ZEE
+Exec=systemctl --user start zee-service@%u.service && notify-send "ZEE AI" "ZEE is starting..." -i audio-input-microphone
+
+[Desktop Action Stop]
+Name=Stop ZEE
+Exec=systemctl --user stop zee-service@%u.service && notify-send "ZEE AI" "ZEE has been stopped" -i audio-input-microphone
+
+[Desktop Action Restart]
+Name=Restart ZEE
+Exec=systemctl --user restart zee-service@%u.service && notify-send "ZEE AI" "ZEE is restarting..." -i audio-input-microphone
+
+[Desktop Action Logs]
+Name=View Logs
+Exec=kitty -e tail -f /home/hari/ZEE/logs/zee_service.log
