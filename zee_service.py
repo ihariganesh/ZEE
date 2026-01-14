@@ -42,6 +42,8 @@ from system_controller import SystemController, PhoneController
 from research_engine import ResearchEngine
 from user_profile import UserProfile
 from daily_briefing import DailyBriefing
+from task_manager import TaskManager
+from workspace_helper import WorkspaceHelper
 from config import Config
 
 
@@ -63,6 +65,8 @@ class ZEEService:
         self.phone = PhoneController()
         self.research = ResearchEngine()
         self.briefing = DailyBriefing()
+        self.tasks = TaskManager()
+        self.workspace = WorkspaceHelper()
         
         # No automation for now (X11 issues)
         self.automation = None
@@ -157,8 +161,12 @@ class ZEEService:
         
         # Help
         elif 'help' in command_lower or 'what can you do' in command_lower:
-            help_text = """I can help you with: Opening apps and websites. 
-            Controlling volume and settings. Researching topics. 
+            help_text = """I'm your AI co-worker! I can help with: 
+            Opening apps and websites. 
+            Managing your tasks and notes. 
+            Checking your workspace and git status. 
+            Researching topics and answering questions. 
+            Typing text and controlling your system. 
             Just ask me naturally!"""
             self.voice.speak(help_text)
         
@@ -180,6 +188,58 @@ class ZEEService:
                 print(f"✍️ Typed: {text_to_type}")
             else:
                 self.voice.speak("What should I type?")
+        
+        # Task management
+        elif any(phrase in command_lower for phrase in ['add task', 'new task', 'create task', 'remind me to', 'todo']):
+            # Extract task description
+            task_desc = command_lower
+            for phrase in ['add task', 'new task', 'create task', 'remind me to', 'todo', 'to do']:
+                task_desc = task_desc.replace(phrase, '')
+            task_desc = task_desc.strip()
+            
+            if task_desc:
+                self.tasks.add_task(task_desc)
+                self.voice.speak(f"Added to your tasks: {task_desc}")
+            else:
+                self.voice.speak("What task should I add?")
+        
+        elif any(phrase in command_lower for phrase in ['list tasks', 'show tasks', 'my tasks', 'what tasks', 'task summary']):
+            summary = self.tasks.get_summary()
+            self.voice.speak(summary)
+        
+        elif 'complete task' in command_lower or 'task done' in command_lower:
+            # Try to extract task ID or use first pending task
+            pending = self.tasks.list_tasks("pending")
+            if pending:
+                self.tasks.complete_task(pending[0]["id"])
+                self.voice.speak(f"Marked as complete: {pending[0]['description']}")
+            else:
+                self.voice.speak("No pending tasks to complete")
+        
+        # Note taking
+        elif any(phrase in command_lower for phrase in ['take note', 'make note', 'note this', 'remember this']):
+            note_content = command_lower
+            for phrase in ['take note', 'make note', 'note this', 'remember this', 'that']:
+                note_content = note_content.replace(phrase, '')
+            note_content = note_content.strip()
+            
+            if note_content:
+                self.tasks.add_note(note_content)
+                self.voice.speak("Note saved")
+            else:
+                self.voice.speak("What should I note?")
+        
+        # Workspace awareness
+        elif any(phrase in command_lower for phrase in ['what am i working on', 'current context', 'workspace status']):
+            context = self.workspace.get_context_summary()
+            self.voice.speak(context)
+        
+        elif 'git status' in command_lower:
+            git_status = self.workspace.get_git_status()
+            if git_status:
+                self.voice.speak(f"Git status: {git_status}")
+            else:
+                self.voice.speak("Not in a git repository")
         
         else:
             # General query - use AI

@@ -1,16 +1,19 @@
 # ZEE AI Assistant 🤖
 
-A **FREE**, **cross-platform** (Windows/Linux) AI assistant with **wake word detection** - just like Siri or Google Assistant!
+A **FREE** AI co-worker that helps you be productive on your laptop - with **wake word detection**, task management, and workspace awareness!
 
 ## ✨ Features
 
-✅ **100% FREE** - No paid subscriptions required!  
+✅ **AI Co-Worker** - Task management, notes, workspace awareness  
 ✅ **Wake Word Activated** - Say "Hey ZEE" anytime (like Siri/Alexa)  
+✅ **100% FREE** - No paid subscriptions required!  
 ✅ **Auto-Start Service** - Runs in background on boot  
-✅ **Cross-Platform** - Works on Windows, Linux (Ubuntu, Arch, etc.)  
 ✅ **Natural Voice** - Google Neural TTS (sounds like Siri/Gemini)  
-✅ **System Control** - Open apps, adjust volume, WiFi, brightness  
+✅ **Task Manager** - Add tasks, reminders, and notes by voice  
+✅ **Workspace Helper** - Git status, context awareness  
+✅ **System Control** - Open apps, adjust volume, type text  
 ✅ **AI Research** - Web search with AI explanations  
+✅ **Daily Briefing** - Weather, date, and news summary  
 ✅ **Offline Mode** - Works without internet (with Ollama)  
 
 ## 🆓 FREE Tools Used
