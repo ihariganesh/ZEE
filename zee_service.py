@@ -44,6 +44,7 @@ from user_profile import UserProfile
 from daily_briefing import DailyBriefing
 from task_manager import TaskManager
 from workspace_helper import WorkspaceHelper
+from advanced_ai import AdvancedAI
 from config import Config
 
 
@@ -67,10 +68,12 @@ class ZEEService:
         self.briefing = DailyBriefing()
         self.tasks = TaskManager()
         self.workspace = WorkspaceHelper()
+        self.advanced_ai = AdvancedAI(self.research)
         
         # No automation for now (X11 issues)
         self.automation = None
         
+        print("✅ Advanced AI initialized - Context-aware responses")
         print("\n✅ ZEE Service Ready!")
         print("="*60)
         print("💡 Say 'Hey ZEE' or 'ZEE' to activate")
@@ -99,6 +102,9 @@ class ZEEService:
         """Process voice command."""
         command_lower = command.lower()
         print(f"\n🎯 Processing: {command}")
+        
+        # Add user message to conversation history
+        self.advanced_ai.conversation.add_message("user", command)
         
         # Stop speaking command
         if any(word in command_lower for word in ['stop', 'quiet', 'shut up', 'stop talking', 'stop speaking']):
@@ -161,12 +167,13 @@ class ZEEService:
         
         # Help
         elif 'help' in command_lower or 'what can you do' in command_lower:
-            help_text = """I'm your AI co-worker! I can help with: 
+            help_text = """I'm your AI co-worker with advanced context awareness! I can help with: 
             Opening apps and websites. 
             Managing your tasks and notes. 
             Checking your workspace and git status. 
-            Researching topics and answering questions. 
+            Researching topics and answering questions with conversation memory. 
             Typing text and controlling your system. 
+            I remember our conversation context and learn from your patterns. 
             Just ask me naturally!"""
             self.voice.speak(help_text)
         
@@ -242,9 +249,19 @@ class ZEEService:
                 self.voice.speak("Not in a git repository")
         
         else:
-            # General query - use AI
+            # General query - use advanced context-aware AI
             self.voice.speak("Let me think about that")
-            result = self.research.ai.generate_response(command)
+            
+            # Add current context to the conversation
+            workspace_context = self.workspace.get_context_summary()
+            task_context = self.tasks.get_summary()
+            
+            # Generate smart response with context
+            result = self.advanced_ai.generate_smart_response(
+                command,
+                context=f"Workspace: {workspace_context}\nTasks: {task_context}"
+            )
+            
             if result:
                 self.voice.speak(result)
             else:
