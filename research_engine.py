@@ -159,18 +159,33 @@ class AIProcessor:
         if self.groq_available:
             try:
                 response = self.groq_client.chat.completions.create(
-                    model="llama-3.1-8b-instant",  # Fast & free
+                    model="llama-3.3-70b-versatile",  # Upgraded to better model for quality
                     messages=[
-                        {"role": "system", "content": "You are a helpful AI assistant that provides clear, concise answers."},
+                        {"role": "system", "content": "You are ZEE, a professional AI assistant. Provide clear, accurate, and actionable responses. Be conversational but concise. Avoid unnecessary preambles."},
                         {"role": "user", "content": full_prompt}
                     ],
                     max_tokens=max_tokens,
-                    temperature=0.7
+                    temperature=0.8,  # Slightly higher for more natural responses
+                    top_p=0.9
                 )
                 return response.choices[0].message.content
                 
             except Exception as e:
                 print(f"⚠️  Groq error: {e}")
+                # Fallback to faster model if quota exceeded
+                try:
+                    response = self.groq_client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {"role": "system", "content": "You are ZEE, a professional AI assistant. Be clear, concise, and helpful."},
+                            {"role": "user", "content": full_prompt}
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=0.8
+                    )
+                    return response.choices[0].message.content
+                except:
+                    pass
         
         # Fallback to Ollama (FREE & Offline)
         if self.ollama_available:
