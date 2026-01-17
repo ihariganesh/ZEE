@@ -46,6 +46,7 @@ from task_manager import TaskManager
 from workspace_helper import WorkspaceHelper
 from advanced_ai import AdvancedAI
 from config import Config
+from datetime import datetime
 
 
 class ZEEService:
@@ -81,20 +82,66 @@ class ZEEService:
         print("="*60 + "\n")
     
     def greet_user(self):
-        """Greet user on service start."""
+        """Greet user on service start with personality."""
+        import random
+        
         if not self.profile.has_name():
-            self.voice.speak("Hey! I'm ZEE, your AI assistant. What's your name?")
+            greetings = [
+                "Hey! I'm ZEE, your AI assistant. What's your name?",
+                "Hi there! I'm ZEE. I'd love to know your name!",
+                "Hello! ZEE here, ready to help. What should I call you?"
+            ]
+            self.voice.speak(random.choice(greetings))
             name_response = self.voice.listen(timeout=15, phrase_time_limit=5)
             if name_response:
                 name = name_response.lower().replace("my name is", "").replace("i'm", "").replace("i am", "").strip()
                 name = name.split()[0].capitalize() if name else "Friend"
                 self.profile.set_name(name)
-                self.voice.speak(f"Nice to meet you, {name}! I'm always here when you need me. Just say 'Hey ZEE'!")
+                
+                welcome_messages = [
+                    f"Nice to meet you, {name}! I'm always here when you need me. Just say 'Hey ZEE'!",
+                    f"Great to meet you, {name}! Excited to work together. Say 'Hey ZEE' anytime!",
+                    f"Awesome! Hi {name}! I'm ready to help whenever you need. Just call my name!"
+                ]
+                self.voice.speak(random.choice(welcome_messages))
             else:
                 self.voice.speak("No worries! Just say 'Hey ZEE' whenever you need me.")
         else:
             name = self.profile.get_name()
-            self.voice.speak(f"Hey {name}! ZEE is ready. Just say my name whenever you need help!")
+            interaction_count = self.profile.profile.get('interaction_count', 0)
+            current_hour = datetime.now().hour
+            
+            # Time-based greetings with personality
+            if 5 <= current_hour < 12:
+                greetings = [
+                    f"Good morning, {name}! Ready to tackle the day?",
+                    f"Morning {name}! Let's make today productive!",
+                    f"Hey {name}! Fresh start today - what's on your mind?"
+                ]
+            elif 12 <= current_hour < 17:
+                greetings = [
+                    f"Hey {name}! How's your day going?",
+                    f"Afternoon {name}! What can I help with?",
+                    f"Hi {name}! Ready to crush some tasks?"
+                ]
+            elif 17 <= current_hour < 21:
+                greetings = [
+                    f"Evening {name}! Still grinding? I'm here to help!",
+                    f"Hey {name}! Let's wrap up the day strong!",
+                    f"Good evening {name}! What do you need?"
+                ]
+            else:
+                greetings = [
+                    f"Hey {name}! Burning the midnight oil? I'm here!",
+                    f"Late night, {name}? Let's get it done!",
+                    f"Night owl mode activated, {name}! How can I help?"
+                ]
+            
+            # Add rapport-based variation
+            if interaction_count > 50:
+                greetings.append(f"Hey {name}! Your favorite AI buddy is back! \ud83d\ude0a")
+            
+            self.voice.speak(random.choice(greetings))
         
         self.profile.update_last_use()
     
@@ -108,6 +155,9 @@ class ZEEService:
         
         # Stop speaking command
         if any(word in command_lower for word in ['stop', 'quiet', 'shut up', 'stop talking', 'stop speaking']):
+            import random
+            stop_responses = ["Okay!", "Got it!", "Stopping!", "Sure thing!"]
+            self.voice.speak(random.choice(stop_responses))
             self.voice.stop_speech()
             return
         
@@ -120,15 +170,25 @@ class ZEEService:
         
         # Exit/sleep commands
         elif any(word in command_lower for word in ['sleep', 'goodbye', 'stop listening']):
-            self.voice.speak("Going to sleep. Say 'Hey ZEE' to wake me up!")
+            import random
+            goodbye_messages = [
+                "Going to sleep. Say 'Hey ZEE' to wake me up!",
+                "Alright, taking a break! Call me when you need me!",
+                "Sweet dreams! I'll be here when you need me.",
+                "Catching some Z's! Wake me anytime!"
+            ]
+            self.voice.speak(random.choice(goodbye_messages))
             return
         
         # System control
         elif 'open' in command_lower:
-            self.voice.speak("On it!")
+            import random
+            action_responses = ["On it!", "Opening now!", "Right away!", "You got it!", "Coming right up!"]
+            self.voice.speak(random.choice(action_responses))
             if 'browser' in command_lower or 'chrome' in command_lower:
                 self.system.open_application('browser')
-                self.voice.speak("Browser opened")
+                success_msgs = ["Browser opened!", "There you go!", "All set!", "Done!"]
+                self.voice.speak(random.choice(success_msgs))
             elif 'google' in command_lower:
                 self.system.open_url('https://www.google.com')
                 self.voice.speak("Google opened")
@@ -176,6 +236,20 @@ class ZEEService:
             I remember our conversation context and learn from your patterns. 
             Just ask me naturally!"""
             self.voice.speak(help_text)
+        
+        # Thank you responses
+        elif any(phrase in command_lower for phrase in ['thank you', 'thanks', 'appreciate it', 'good job']):
+            import random
+            thanks_responses = [
+                "You're welcome! Happy to help!",
+                "Anytime! That's what I'm here for!",
+                "My pleasure! Let me know if you need anything else!",
+                "Glad I could help! 😊",
+                "No problem at all! Always here for you!",
+                "You're very welcome! Enjoy!"
+            ]
+            self.voice.speak(random.choice(thanks_responses))
+            return
         
         # Typing commands
         elif any(word in command_lower for word in ['type', 'write', 'enter', 'search for']):

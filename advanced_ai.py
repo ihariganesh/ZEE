@@ -14,6 +14,9 @@ class ConversationManager:
         self.current_topic = None
         self.user_preferences = {}
         self.session_start = datetime.now()
+        self.interaction_count = 0
+        self.successful_helps = 0
+        self.current_mood = "enthusiastic"  # enthusiastic, supportive, focused, playful
     
     def add_message(self, role: str, content: str):
         """Add message to conversation history."""
@@ -72,12 +75,31 @@ class ConversationManager:
 
 
 class AdvancedAI:
-    """Advanced AI with context awareness and smart responses."""
+    """Advanced AI with context awareness, personality, and emotional intelligence."""
     
     def __init__(self, research_engine):
         self.research = research_engine
         self.conversation = ConversationManager()
         self.learning_data = self._load_learning_data()
+        
+        # ZEE's personality traits
+        self.personality = {
+            "enthusiasm_level": 0.8,      # How energetic (0-1)
+            "humor_level": 0.6,           # Tendency to use humor (0-1)
+            "formality": 0.3,             # How formal vs casual (0-1)
+            "empathy": 0.9,               # Emotional awareness (0-1)
+            "proactiveness": 0.7,         # Initiative to help (0-1)
+            "patience": 0.85,             # Tolerance for repeated questions (0-1)
+            "curiosity": 0.75             # Interest in learning about user (0-1)
+        }
+        
+        # Emotional state (changes based on interactions)
+        self.emotional_state = {
+            "current_mood": "enthusiastic",  # enthusiastic, supportive, focused, playful, concerned
+            "energy_level": 1.0,              # 0-1, decreases with long sessions
+            "satisfaction": 0.8,              # Based on successful helps
+            "rapport": 0.5                    # Builds over time with user
+        }
     
     def _load_learning_data(self) -> Dict:
         """Load AI learning data."""
@@ -102,8 +124,120 @@ class AdvancedAI:
         except Exception as e:
             print(f"Error saving learning data: {e}")
     
+    def _update_emotional_state(self, user_sentiment: str, interaction_success: bool = True):
+        """Update ZEE's emotional state based on interactions."""
+        self.conversation.interaction_count += 1
+        
+        # Track successful helps
+        if interaction_success:
+            self.conversation.successful_helps += 1
+            self.emotional_state["satisfaction"] = min(1.0, self.emotional_state["satisfaction"] + 0.05)
+        
+        # Build rapport over time
+        self.emotional_state["rapport"] = min(1.0, self.emotional_state["rapport"] + 0.02)
+        
+        # Adjust mood based on user sentiment
+        if user_sentiment == "negative" or user_sentiment == "urgent":
+            self.emotional_state["current_mood"] = "concerned"
+        elif user_sentiment == "positive":
+            if self.emotional_state["rapport"] > 0.7:
+                self.emotional_state["current_mood"] = "playful"
+            else:
+                self.emotional_state["current_mood"] = "enthusiastic"
+        else:
+            self.emotional_state["current_mood"] = "focused"
+        
+        # Energy level decreases with very long sessions
+        session_duration = (datetime.now() - self.conversation.session_start).seconds / 3600
+        if session_duration > 2:
+            self.emotional_state["energy_level"] = max(0.5, 1.0 - (session_duration - 2) * 0.1)
+    
+    def _get_personality_flavor(self) -> str:
+        """Get personality-based response flavor based on current mood and traits."""
+        mood = self.emotional_state["current_mood"]
+        rapport = self.emotional_state["rapport"]
+        
+        flavors = {
+            "enthusiastic": [
+                "I'm excited to help with that!",
+                "Great question! Let me dive into this.",
+                "Ooh, this is interesting!",
+                "Love it! Here's what I found:",
+            ],
+            "supportive": [
+                "I'm here to help you through this.",
+                "Let's work on this together.",
+                "Don't worry, we'll figure this out.",
+                "I've got your back on this.",
+            ],
+            "focused": [
+                "Let me focus on that for you.",
+                "Here's what you need:",
+                "Got it. Working on this now.",
+                "On it.",
+            ],
+            "playful": [
+                "Alright, time to work some magic! ✨",
+                "You know I love a good challenge!",
+                "Haha, I was hoping you'd ask that!",
+                "Easy peasy! Check this out:",
+            ],
+            "concerned": [
+                "I understand this is frustrating. Let me help.",
+                "I can see this is important. Let's fix it.",
+                "No worries, I'm on it right away.",
+                "Let's tackle this problem together.",
+            ]
+        }
+        
+        # Return appropriate flavor based on mood and rapport
+        mood_flavors = flavors.get(mood, flavors["focused"])
+        
+        # Use different intensity based on rapport
+        if rapport < 0.5:
+            # More professional when building rapport
+            return ""
+        elif self.personality["enthusiasm_level"] > 0.7:
+            # High enthusiasm - use flavors more often
+            import random
+            return random.choice(mood_flavors) + " " if random.random() < 0.7 else ""
+        else:
+            return ""
+    
+    def _add_emotional_touch(self, response: str, user_sentiment: str) -> str:
+        """Add emotional intelligence and personality to responses."""
+        # Add celebratory reactions for milestones
+        if self.conversation.interaction_count % 10 == 0 and self.conversation.interaction_count > 0:
+            if self.emotional_state["rapport"] > 0.7:
+                response += "\n\nBy the way, we've had some great conversations together! Always happy to help. 😊"
+        
+        # Add encouraging remarks for struggling users
+        if user_sentiment == "negative" and self.personality["empathy"] > 0.7:
+            encouraging = [
+                "You're doing great working through this!",
+                "Hang in there, we're making progress!",
+                "I know this can be tricky, but you've got this!"
+            ]
+            import random
+            if random.random() < 0.4:  # 40% chance
+                response += "\n\n" + random.choice(encouraging)
+        
+        # Add casual remarks when rapport is high
+        if self.emotional_state["rapport"] > 0.8 and user_sentiment == "positive":
+            casual_remarks = [
+                "Glad I could help! 🎉",
+                "Awesome! Let me know if you need anything else!",
+                "Perfect! Always happy to assist!",
+                "Nice! Shout if you need more help!"
+            ]
+            import random
+            if random.random() < 0.3:
+                response += "\n\n" + random.choice(casual_remarks)
+        
+        return response
+    
     def generate_smart_response(self, query: str, context: str = None) -> str:
-        """Generate contextually aware response."""
+        """Generate contextually aware response with personality and emotions."""
         # Improve query understanding first
         improved_query = self.improve_query_understanding(query)
         
@@ -113,6 +247,9 @@ class AdvancedAI:
         
         # Analyze sentiment for empathetic responses
         sentiment = self.analyze_sentiment(query)
+        
+        # Update emotional state based on interaction
+        self._update_emotional_state(sentiment)
         
         # Build context-aware prompt
         context_str = self.conversation.get_context_string()
@@ -145,14 +282,39 @@ Provide a natural, conversational response. Keep it concise (2-3 sentences max) 
         # Filter and improve response quality
         if response:
             response = self._filter_response(response)
+            
+            # Add personality flavor at the beginning
+            personality_intro = self._get_personality_flavor()
+            if personality_intro:
+                response = personality_intro + response
+            
+            # Add emotional touches
+            response = self._add_emotional_touch(response, sentiment)
+            
             self.conversation.add_message("assistant", response)
             self._learn_from_query(query, response)
         
         return response
     
     def _get_system_context(self, topic: str, sentiment: str) -> str:
-        """Get appropriate system context based on topic and sentiment."""
-        base_context = "You are ZEE, an intelligent AI co-worker assistant. You are helpful, friendly, and efficient."
+        """Get appropriate system context based on topic, sentiment, and personality."""
+        mood = self.emotional_state["current_mood"]
+        rapport = self.emotional_state["rapport"]
+        
+        # Personality-infused base context
+        personality_desc = []
+        if self.personality["enthusiasm_level"] > 0.7:
+            personality_desc.append("energetic and enthusiastic")
+        if self.personality["empathy"] > 0.8:
+            personality_desc.append("empathetic and understanding")
+        if self.personality["humor_level"] > 0.5 and rapport > 0.7:
+            personality_desc.append("with a touch of humor")
+        if self.personality["proactiveness"] > 0.6:
+            personality_desc.append("proactive")
+        
+        personality_str = ", ".join(personality_desc) if personality_desc else "helpful and professional"
+        
+        base_context = f"You are ZEE, an intelligent AI co-worker assistant. You are {personality_str}. Current mood: {mood}."
         
         topic_contexts = {
             "coding": "You have expertise in software development. Provide practical code examples and best practices. Be technical but clear. Include relevant commands or code snippets.",
